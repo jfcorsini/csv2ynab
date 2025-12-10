@@ -318,27 +318,29 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
         </div>
       </div>
 
-      <div className="flex justify-between pt-4">
-        <button
-          onClick={onBack}
-          className="px-6 py-3 text-slate-600 hover:text-slate-900 hover:bg-white rounded-xl font-medium transition-all duration-200 flex items-center"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Back
-        </button>
-        <button
-          onClick={() => onNext(config)}
-          disabled={!isValid()}
-          className={`
-            px-8 py-3 rounded-xl font-bold flex items-center shadow-lg transform transition-all duration-200
-            ${isValid()
-              ? 'bg-slate-900 hover:bg-black text-white hover:-translate-y-1 shadow-slate-300'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}
-          `}
-        >
-          Review & Convert
-          <ArrowRight size={20} className="ml-2" />
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="w-full max-w-6xl flex justify-between px-4">
+          <button
+            onClick={onBack}
+            className="px-6 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl font-medium transition-all duration-200 flex items-center"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            Back
+          </button>
+          <button
+            onClick={() => onNext(config)}
+            disabled={!isValid()}
+            className={`
+              px-8 py-3 rounded-xl font-bold flex items-center shadow-lg transform transition-all duration-200
+              ${isValid()
+                ? 'bg-slate-900 hover:bg-black text-white hover:-translate-y-1 shadow-slate-300'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}
+            `}
+          >
+            Review & Convert
+            <ArrowRight size={20} className="ml-2" />
+          </button>
+        </div>
       </div>
     </div>
   );

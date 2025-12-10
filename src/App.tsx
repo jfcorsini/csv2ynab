@@ -68,7 +68,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-12 relative z-10 flex flex-col min-h-[calc(100vh-4rem)]">
+      <main className="max-w-6xl mx-auto px-4 py-12 pb-32 relative z-10 flex flex-col min-h-[calc(100vh-4rem)]">
         <div className="flex-grow">
           {step === 'upload' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

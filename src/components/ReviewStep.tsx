@@ -153,34 +153,45 @@ export function ReviewStep({ data, initialConfig, onBack, onReset }: ReviewStepP
             <p className="text-slate-300 text-sm mb-6 leading-relaxed">
               Your file is processed and ready. Download the CSV and import it directly into YNAB.
             </p>
-            <button
-              onClick={handleDownload}
-              disabled={rows.length === 0}
-              className="w-full py-4 bg-white text-slate-900 hover:bg-blue-50 rounded-xl font-bold shadow-lg flex items-center justify-center transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              <Download size={20} className="mr-2" />
-              Download YNAB CSV
-            </button>
+            <div className="text-center p-4 bg-white/10 rounded-xl border border-white/10">
+              <p className="text-sm font-medium">
+                Click the button below to download your file.
+              </p>
+            </div>
           </div>
 
-          <div className="flex justify-between pt-2">
+        </div>
+      </div>
+
+
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="w-full max-w-6xl flex justify-between px-4">
+          <div className="flex space-x-4">
             <button
               onClick={onBack}
-              className="px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-white rounded-lg text-sm font-medium transition-colors flex items-center"
+              className="px-6 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl font-medium transition-all duration-200 flex items-center"
             >
-              <ArrowLeft size={16} className="mr-2" />
-              Back to Mapping
+              <ArrowLeft size={20} className="mr-2" />
+              Back
             </button>
             <button
               onClick={onReset}
-              className="px-4 py-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors flex items-center"
+              className="px-6 py-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl font-medium transition-all duration-200 flex items-center"
             >
-              <RefreshCw size={16} className="mr-2" />
+              <RefreshCw size={20} className="mr-2" />
               Start Over
             </button>
           </div>
+          <button
+            onClick={handleDownload}
+            disabled={rows.length === 0}
+            className="px-8 py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold flex items-center shadow-lg shadow-slate-200 hover:shadow-xl hover:shadow-slate-300 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
+          >
+            <Download size={20} className="mr-2" />
+            Download YNAB CSV
+          </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

@@ -129,22 +129,24 @@ export function FileDetails({ file, parseResult, onReparse, onConfirm, onCancel 
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-4">
-          <button
-            onClick={onCancel}
-            className="px-6 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-xl font-medium transition-all duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isReparsing}
-            className="px-8 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-medium flex items-center shadow-lg shadow-slate-200 hover:shadow-xl hover:shadow-slate-300 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
-          >
-            {isReparsing ? 'Parsing...' : 'Continue'}
-            {!isReparsing && <ArrowRight size={18} className="ml-2" />}
-          </button>
+        {/* Actions - Fixed Footer */}
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <div className="w-full max-w-6xl flex justify-end space-x-4 px-4">
+            <button
+              onClick={onCancel}
+              className="px-6 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl font-medium transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isReparsing}
+              className="px-8 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-medium flex items-center shadow-lg shadow-slate-200 hover:shadow-xl hover:shadow-slate-300 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
+            >
+              {isReparsing ? 'Parsing...' : 'Continue'}
+              {!isReparsing && <ArrowRight size={18} className="ml-2" />}
+            </button>
+          </div>
         </div>
       </div>
     </div>
