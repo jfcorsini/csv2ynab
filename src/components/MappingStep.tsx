@@ -38,12 +38,36 @@ function detectDecimalSeparator(rows: CsvRow[], amountColumn: string): '.' | ','
 
   if (hasComma && !hasDot) return ',';
 
+
+
   return '.';
 }
+
+const getStorageKey = (headers: string[]) => {
+  const headerString = headers.slice().sort().join('|');
+  let hash = 0;
+  for (let i = 0; i < headerString.length; i++) {
+    const char = headerString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return `csv2ynab_config_${hash}`;
+};
 
 export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext }: MappingStepProps) {
   const [config, setConfig] = useState<MappingConfig>(() => {
     if (initialConfig) return initialConfig;
+
+    // Try to load from local storage
+    try {
+      const key = getStorageKey(headers);
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Failed to load config from storage', e);
+    }
 
     const amountCol = headers.find(h => /amount|value|sum/i.test(h)) || '';
     const decimalSep = detectDecimalSeparator(sampleRows, amountCol);
@@ -328,7 +352,16 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
             Back
           </button>
           <button
-            onClick={() => onNext(config)}
+            onClick={() => {
+              // Save to local storage
+              try {
+                const key = getStorageKey(headers);
+                localStorage.setItem(key, JSON.stringify(config));
+              } catch (e) {
+                console.warn('Failed to save config to storage', e);
+              }
+              onNext(config);
+            }}
             disabled={!isValid()}
             className={`
               px-8 py-3 rounded-xl font-bold flex items-center shadow-lg transform transition-all duration-200
