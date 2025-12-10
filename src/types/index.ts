@@ -24,6 +24,10 @@ export interface MappingConfig {
   // Filters
   skipEmptyAmount: boolean;
   trimWhitespace: boolean;
+
+  // Power Features
+  autoCleanPayee?: boolean;
+  payeeRules?: { match: string; replacement: string }[];
 }
 
 export interface ParseResult {

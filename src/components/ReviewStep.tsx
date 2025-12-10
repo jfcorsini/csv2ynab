@@ -1,17 +1,57 @@
 import { useMemo, useState } from 'react';
-import { Download, RefreshCw, Filter, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, RefreshCw, Filter, ArrowLeft, AlertCircle, Wand2, Plus, Trash2, ArrowRightLeft, Sparkles, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import type { CsvRow, MappingConfig } from '../types';
 import { processAll, generateYnabCsv } from '../utils/csv';
+import { saveConfigToStorage } from '../utils/storage';
 
 interface ReviewStepProps {
   data: CsvRow[];
+  headers: string[];
   initialConfig: MappingConfig;
   onBack: () => void;
   onReset: () => void;
+  onConfigUpdate: (config: MappingConfig) => void;
 }
 
-export function ReviewStep({ data, initialConfig, onBack, onReset }: ReviewStepProps) {
+export function ReviewStep({ data, headers, initialConfig, onBack, onReset, onConfigUpdate }: ReviewStepProps) {
   const [config, setConfig] = useState<MappingConfig>(initialConfig);
+  const [newRuleMatch, setNewRuleMatch] = useState('');
+  const [newRuleReplace, setNewRuleReplace] = useState('');
+  const [isPowerToolsOpen, setIsPowerToolsOpen] = useState(false);
+
+  const updateConfig = (newConfig: MappingConfig) => {
+    setConfig(newConfig);
+    onConfigUpdate(newConfig);
+    saveConfigToStorage(headers, newConfig);
+  };
+
+  const addRule = () => {
+    if (!newRuleMatch) return;
+    const newConfig = {
+      ...config,
+      payeeRules: [...(config.payeeRules || []), { match: newRuleMatch, replacement: newRuleReplace }]
+    };
+    updateConfig(newConfig);
+    setNewRuleMatch('');
+    setNewRuleReplace('');
+  };
+
+  const removeRule = (index: number) => {
+    const newConfig = {
+      ...config,
+      payeeRules: config.payeeRules?.filter((_, i) => i !== index)
+    };
+    updateConfig(newConfig);
+  };
+
+  const swapPayeeMemo = () => {
+    const newConfig = {
+      ...config,
+      payeeColumn: config.memoColumn,
+      memoColumn: config.payeeColumn
+    };
+    updateConfig(newConfig);
+  };
 
   const { rows, stats } = useMemo(() => {
     return processAll(data, config);
@@ -30,11 +70,12 @@ export function ReviewStep({ data, initialConfig, onBack, onReset }: ReviewStepP
   };
 
   const toggleFilter = (key: keyof MappingConfig) => {
-    setConfig(prev => ({ ...prev, [key]: !prev[key] }));
+    const newConfig = { ...config, [key]: !config[key] };
+    updateConfig(newConfig);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 animate-slide-up">
+    <div className="w-full max-w-7xl mx-auto space-y-8">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl border border-white/20 shadow-glass flex flex-col justify-between group hover:border-blue-200 transition-colors">
@@ -119,47 +160,148 @@ export function ReviewStep({ data, initialConfig, onBack, onReset }: ReviewStepP
 
             <div className="space-y-4">
               <label className="flex items-center p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all group">
-                <div className="relative flex items-center">
+                <div className="relative w-5 h-5 shrink-0">
                   <input
                     type="checkbox"
                     className="peer sr-only"
                     checked={config.skipEmptyAmount}
                     onChange={() => toggleFilter('skipEmptyAmount')}
                   />
-                  <div className="w-5 h-5 border-2 border-slate-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
-                  <CheckCircle2 size={14} className="absolute top-0.5 left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 border-2 border-slate-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <Check size={12} strokeWidth={3} className="text-white" />
+                  </div>
                 </div>
                 <span className="ml-3 text-sm font-medium text-slate-600 group-hover:text-slate-900">Skip empty amounts</span>
               </label>
 
               <label className="flex items-center p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all group">
-                <div className="relative flex items-center">
+                <div className="relative w-5 h-5 shrink-0">
                   <input
                     type="checkbox"
                     className="peer sr-only"
                     checked={config.trimWhitespace}
                     onChange={() => toggleFilter('trimWhitespace')}
                   />
-                  <div className="w-5 h-5 border-2 border-slate-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
-                  <CheckCircle2 size={14} className="absolute top-0.5 left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 border-2 border-slate-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <Check size={12} strokeWidth={3} className="text-white" />
+                  </div>
                 </div>
                 <span className="ml-3 text-sm font-medium text-slate-600 group-hover:text-slate-900">Trim whitespace</span>
               </label>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xl shadow-slate-200">
-            <h4 className="font-bold text-xl mb-2">Ready to Export?</h4>
-            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-              Your file is processed and ready. Download the CSV and import it directly into YNAB.
-            </p>
-            <div className="text-center p-4 bg-white/10 rounded-xl border border-white/10">
-              <p className="text-sm font-medium">
-                Click the button below to download your file.
-              </p>
-            </div>
-          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <button
+              onClick={() => setIsPowerToolsOpen(!isPowerToolsOpen)}
+              className="w-full text-left p-6 flex justify-between items-center bg-white hover:bg-slate-50 transition-colors z-20 relative"
+            >
+              <div className="flex items-center text-slate-900 font-bold text-lg">
+                <Sparkles size={20} className="mr-2 text-purple-600" />
+                Power Tools
+              </div>
+              {isPowerToolsOpen ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+            </button>
 
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none z-10">
+              <Wand2 size={120} />
+            </div>
+
+            {isPowerToolsOpen && (
+              <div className="p-6 pt-0 space-y-6 relative z-10 animate-fade-in border-t border-slate-100 mt-4">
+                {/* Auto Clean */}
+                <label className="flex items-center p-3 rounded-xl border border-purple-100 bg-purple-50/50 hover:bg-purple-50 cursor-pointer transition-all group">
+                  <div className="relative w-5 h-5 shrink-0">
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={config.autoCleanPayee || false}
+                      onChange={() => toggleFilter('autoCleanPayee')}
+                    />
+                    <div className="absolute inset-0 border-2 border-purple-300 rounded peer-checked:bg-purple-600 peer-checked:border-purple-600 transition-all"></div>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity">
+                      <Check size={12} strokeWidth={3} className="text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <span className="block text-sm font-bold text-purple-900">Auto-Clean Payees</span>
+                    <span className="block text-xs text-purple-700/70">Remove common bank noise</span>
+                  </div>
+                </label>
+
+                {/* Swap */}
+                <button
+                  onClick={swapPayeeMemo}
+                  className="w-full flex items-center justify-center space-x-2 p-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600 hover:text-blue-700 transition-all font-medium text-sm"
+                >
+                  <ArrowRightLeft size={16} />
+                  <span>Swap Payee & Memo Columns</span>
+                </button>
+
+                {/* Rules */}
+                <div className="pt-4 border-t border-slate-100">
+                  <h5 className="font-bold text-sm text-slate-700 mb-3 flex items-center">
+                    Payee Renaming Rules
+                    <span className="ml-2 text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {config.payeeRules?.length || 0}
+                    </span>
+                  </h5>
+
+                  {/* Existing Rules */}
+                  <div className="space-y-2 mb-4 max-h-40 overflow-y-auto custom-scrollbar">
+                    {config.payeeRules?.map((rule, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg text-xs group">
+                        <div className="flex-1 grid grid-cols-7 gap-2 items-center">
+                          <div className="col-span-3 truncate text-slate-500" title={rule.match}>"{rule.match}"</div>
+                          <div className="col-span-1 text-center text-slate-300">→</div>
+                          <div className="col-span-3 truncate font-medium text-slate-900" title={rule.replacement}>"{rule.replacement}"</div>
+                        </div>
+                        <button
+                          onClick={() => removeRule(i)}
+                          className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {(!config.payeeRules || config.payeeRules.length === 0) && (
+                      <div className="text-center py-4 text-xs text-slate-400 italic">
+                        No rules added yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add Rule Input */}
+                  <div className="space-y-2">
+                    <input
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                      placeholder="If payee contains..."
+                      value={newRuleMatch}
+                      onChange={(e) => setNewRuleMatch(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                        placeholder="Rename to..."
+                        value={newRuleReplace}
+                        onChange={(e) => setNewRuleReplace(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addRule()}
+                      />
+                      <button
+                        onClick={addRule}
+                        disabled={!newRuleMatch}
+                        className="px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

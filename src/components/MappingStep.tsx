@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
-import { ArrowRight, ArrowLeft, Settings, Calendar, DollarSign, CheckCircle2 } from 'lucide-react';
-import type { MappingConfig, CsvRow } from '../types';
+import Papa from 'papaparse';
+import { ArrowRight, ArrowLeft, Calendar, DollarSign, CheckCircle2, Settings2, Loader2, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import type { MappingConfig, CsvRow, ParseResult } from '../types';
 import { DATE_FORMATS } from '../utils/date';
+import { loadConfigFromStorage, saveConfigToStorage } from '../utils/storage';
 
 interface MappingStepProps {
-  headers: string[];
-  sampleRows: CsvRow[];
+  file: File;
+  parseResult: ParseResult;
   initialConfig?: MappingConfig | null;
+  onReparse: (result: ParseResult) => void;
   onBack: () => void;
   onNext: (config: MappingConfig) => void;
 }
@@ -43,31 +46,17 @@ function detectDecimalSeparator(rows: CsvRow[], amountColumn: string): '.' | ','
   return '.';
 }
 
-const getStorageKey = (headers: string[]) => {
-  const headerString = headers.slice().sort().join('|');
-  let hash = 0;
-  for (let i = 0; i < headerString.length; i++) {
-    const char = headerString.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return `csv2ynab_config_${hash}`;
-};
-
-export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext }: MappingStepProps) {
+export function MappingStep({ file, parseResult, initialConfig, onReparse, onBack, onNext }: MappingStepProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isReparsing, setIsReparsing] = useState(false);
+  const headers = parseResult.meta.fields || [];
+  const sampleRows = parseResult.data.slice(0, 20);
   const [config, setConfig] = useState<MappingConfig>(() => {
     if (initialConfig) return initialConfig;
 
     // Try to load from local storage
-    try {
-      const key = getStorageKey(headers);
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.warn('Failed to load config from storage', e);
-    }
+    const savedConfig = loadConfigFromStorage(headers);
+    if (savedConfig) return savedConfig;
 
     const amountCol = headers.find(h => /amount|value|sum/i.test(h)) || '';
     const decimalSep = detectDecimalSeparator(sampleRows, amountCol);
@@ -93,6 +82,31 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
     return detectDecimalSeparator(sampleRows, amountCol || '');
   }, [sampleRows, config.amountMode, config.amountColumn, config.outflowColumn, config.inflowColumn]);
 
+  const handleReparse = (newDelimiter: string) => {
+    setIsReparsing(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: newDelimiter,
+      preview: 0,
+      complete: (results) => {
+        onReparse({
+          data: results.data as any[],
+          meta: {
+            delimiter: results.meta.delimiter || newDelimiter,
+            fields: results.meta.fields
+          },
+          errors: results.errors
+        });
+        setIsReparsing(false);
+      },
+      error: (error) => {
+        console.error('Reparse Error:', error);
+        setIsReparsing(false);
+      }
+    });
+  };
+
   const handleChange = (key: keyof MappingConfig, value: any) => {
     setConfig(prev => {
       const newConfig = { ...prev, [key]: value };
@@ -114,21 +128,72 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
   };
 
   const previewRow = sampleRows[0] || {};
+  const delimiter = parseResult.meta.delimiter || ',';
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 animate-slide-up">
+    <div className="w-full max-w-5xl mx-auto space-y-8">
       <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-glass border border-white/20 overflow-hidden">
 
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Map Columns</h2>
-            <p className="text-sm text-slate-500 mt-1">Match your bank's columns to YNAB fields</p>
+        {/* Header - Now includes File Info & Settings Toggle */}
+        <div className="border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+          <div className="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                Map Columns
+                <span className="text-sm font-normal text-slate-400">for</span>
+                <span className="text-sm text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 truncate max-w-[200px]" title={file.name}>
+                  {file.name}
+                </span>
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">Match your bank's columns to YNAB fields</p>
+            </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${isSettingsOpen ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+            >
+              <Settings2 size={16} />
+              <span>CSV Settings</span>
+              {isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
           </div>
-          <div className="hidden md:flex items-center space-x-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium border border-blue-100">
-            <Settings size={16} />
-            <span>Configuration</span>
-          </div>
+
+          {/* Expandable Settings Panel */}
+          {isSettingsOpen && (
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 animate-fade-in flex items-center gap-6">
+              <div className="flex-1 max-w-xs">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Delimiter</label>
+                <div className="relative">
+                  <select
+                    className="w-full bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none appearance-none font-medium"
+                    value={delimiter}
+                    onChange={(e) => handleReparse(e.target.value)}
+                    disabled={isReparsing}
+                  >
+                    <option value=",">Comma (,)</option>
+                    <option value=";">Semicolon (;)</option>
+                    <option value={"\t"}>Tab (\t)</option>
+                    <option value="|">Pipe (|)</option>
+                  </select>
+                  {isReparsing && (
+                    <div className="absolute inset-y-0 right-8 flex items-center">
+                      <Loader2 size={16} className="animate-spin text-blue-500" />
+                    </div>
+                  )}
+                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
+                    <ChevronDown size={14} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 border-l border-slate-200 pl-6">
+                <div className="text-xs text-slate-500">
+                  <p className="mb-1"><strong className="text-slate-700">Rows Detected:</strong> {parseResult.data.length.toLocaleString()}</p>
+                  <p><strong className="text-slate-700">Columns Detected:</strong> {headers.length}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -237,15 +302,17 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
                   </div>
 
                   <label className="flex items-center p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 cursor-pointer hover:bg-emerald-50 transition-colors group">
-                    <div className="relative flex items-center">
+                    <div className="relative w-5 h-5 shrink-0">
                       <input
                         type="checkbox"
                         className="peer sr-only"
                         checked={config.isNegativeOutflow}
                         onChange={(e) => handleChange('isNegativeOutflow', e.target.checked)}
                       />
-                      <div className="w-5 h-5 border-2 border-emerald-300 rounded peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all"></div>
-                      <CheckCircle2 size={14} className="absolute top-0.5 left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 border-2 border-emerald-300 rounded peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all"></div>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity">
+                        <Check size={12} strokeWidth={3} className="text-white" />
+                      </div>
                     </div>
                     <span className="ml-3 text-sm font-medium text-emerald-900 group-hover:text-emerald-950">
                       Negative values are <strong>Outflows</strong>
@@ -354,12 +421,7 @@ export function MappingStep({ headers, sampleRows, initialConfig, onBack, onNext
           <button
             onClick={() => {
               // Save to local storage
-              try {
-                const key = getStorageKey(headers);
-                localStorage.setItem(key, JSON.stringify(config));
-              } catch (e) {
-                console.warn('Failed to save config to storage', e);
-              }
+              saveConfigToStorage(headers, config);
               onNext(config);
             }}
             disabled={!isValid()}

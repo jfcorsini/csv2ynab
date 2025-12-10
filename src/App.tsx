@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { UploadStep } from './components/UploadStep';
-import { FileDetails } from './components/FileDetails';
 import { MappingStep } from './components/MappingStep';
 import { ReviewStep } from './components/ReviewStep';
 import type { ParseResult, MappingConfig } from './types';
 
-type Step = 'upload' | 'details' | 'mapping' | 'review';
+type Step = 'upload' | 'mapping' | 'review';
 
 function App() {
   const [step, setStep] = useState<Step>('upload');
@@ -16,10 +15,6 @@ function App() {
   const handleDataLoaded = (result: ParseResult, uploadedFile: File) => {
     setParseResult(result);
     setFile(uploadedFile);
-    setStep('details');
-  };
-
-  const handleConfirmFile = () => {
     setStep('mapping');
   };
 
@@ -71,7 +66,7 @@ function App() {
       <main className="max-w-6xl mx-auto px-4 py-12 pb-32 relative z-10 flex flex-col min-h-[calc(100vh-4rem)]">
         <div className="flex-grow">
           {step === 'upload' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="animate-in fade-in duration-500">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Convert Bank CSVs to YNAB</h2>
                 <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
@@ -83,37 +78,28 @@ function App() {
             </div>
           )}
 
-          {step === 'details' && file && parseResult && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <FileDetails
+          {step === 'mapping' && file && parseResult && (
+            <div className="animate-in fade-in duration-300">
+              <MappingStep
                 file={file}
                 parseResult={parseResult}
-                onReparse={setParseResult}
-                onConfirm={handleConfirmFile}
-                onCancel={handleReset}
-              />
-            </div>
-          )}
-
-          {step === 'mapping' && parseResult && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <MappingStep
-                headers={parseResult.meta.fields || []}
-                sampleRows={parseResult.data.slice(0, 20)}
                 initialConfig={mappingConfig}
-                onBack={() => setStep('details')}
+                onReparse={setParseResult}
+                onBack={handleReset}
                 onNext={handleMappingComplete}
               />
             </div>
           )}
 
           {step === 'review' && parseResult && mappingConfig && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="animate-in fade-in duration-300">
               <ReviewStep
                 data={parseResult.data}
+                headers={parseResult.meta.fields || []}
                 initialConfig={mappingConfig}
                 onBack={() => setStep('mapping')}
                 onReset={handleReset}
+                onConfigUpdate={setMappingConfig}
               />
             </div>
           )}

@@ -104,6 +104,30 @@ export function transformRow(row: CsvRow, config: MappingConfig): YnabRow | null
     memo = memo.trim();
   }
 
+  // 4. Clean Payee (Power Features)
+  if (config.autoCleanPayee) {
+    // Common noise removal
+    payee = payee
+      .replace(/purchase authorization/gi, '')
+      .replace(/pos purchase/gi, '')
+      .replace(/card purchase/gi, '')
+      .replace(/not available/gi, '')
+      .replace(/recurring payment/gi, '')
+      .replace(/^\d{2,}\/\d{2,}\s+/, '') // Remove leading dates like 12/24
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  if (config.payeeRules && config.payeeRules.length > 0) {
+    const lowerPayee = payee.toLowerCase();
+    for (const rule of config.payeeRules) {
+      if (rule.match && lowerPayee.includes(rule.match.toLowerCase())) {
+        payee = rule.replacement;
+        break; // Apply first unique match? Or continue? Usually first match wins or last match wins. Let's break on first match.
+      }
+    }
+  }
+
   // Skip if no amount (optional, but usually good practice to skip 0 transactions if desired, but prompt says "Skip rows missing date OR missing amount(s)")
   // "missing amount(s)" implies empty string, not necessarily 0 value. 
   // But let's stick to the explicit "Skip rows with empty amount" toggle.
